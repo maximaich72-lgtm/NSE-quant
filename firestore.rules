@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation helper for UserProfile
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128
+        && data.email is string && data.email.size() <= 256
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128))
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512))
+        && (!('role' in data) || (data.role in ['analyst', 'investor', 'admin']))
+        && data.userId == request.auth.uid;
+    }
+
+    // Validation helper for ResearchNote
+    function isValidResearchNote(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.companyTicker is string && data.companyTicker.size() <= 16
+        && data.question is string && data.question.size() <= 1000
+        && data.response is string && data.response.size() <= 10000;
+    }
+
+    // Validation helper for CustomScenario
+    function isValidCustomScenario(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.companyTicker is string && data.companyTicker.size() <= 16
+        && data.scenarioName is string && data.scenarioName.size() <= 128;
+    }
+
+    // Validation helper for WatchlistItem
+    function isValidWatchlistItem(data) {
+      return data.companyTicker is string && data.companyTicker.size() <= 16
+        && data.companyName is string && data.companyName.size() <= 128;
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Blanket reads strictly forbidden
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+
+      // Subcollection: Research Notes
+      match /research_notes/{noteId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(noteId) && isValidResearchNote(incoming());
+        allow update: if isOwner(userId) && isValidId(noteId) && isValidResearchNote(incoming())
+          && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(noteId);
+      }
+
+      // Subcollection: Custom Scenarios
+      match /custom_scenarios/{scenarioId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(scenarioId) && isValidCustomScenario(incoming());
+        allow update: if isOwner(userId) && isValidId(scenarioId) && isValidCustomScenario(incoming())
+          && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(scenarioId);
+      }
+
+      // Subcollection: Watchlist
+      match /watchlist/{companyTicker} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(companyTicker) && isValidWatchlistItem(incoming());
+        allow update: if isOwner(userId) && isValidId(companyTicker) && isValidWatchlistItem(incoming());
+        allow delete: if isOwner(userId) && isValidId(companyTicker);
+      }
+    }
+  }
+}

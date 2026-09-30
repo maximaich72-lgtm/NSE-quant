@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with display name, email, role, and terminal preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "role": { "type": "string", "enum": ["analyst", "investor", "admin"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "email"]
+    },
+    "ResearchNote": {
+      "title": "ResearchNote",
+      "description": "User saved financial analysis and AI research inquiries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "companyTicker": { "type": "string", "maxLength": 16 },
+        "companyName": { "type": "string", "maxLength": 128 },
+        "question": { "type": "string", "maxLength": 1000 },
+        "response": { "type": "string", "maxLength": 10000 },
+        "sourceCitations": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "companyTicker", "question", "response"]
+    },
+    "CustomScenario": {
+      "title": "CustomScenario",
+      "description": "User saved financial projection models and pro-forma scenarios",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "companyTicker": { "type": "string", "maxLength": 16 },
+        "scenarioName": { "type": "string", "maxLength": 128 },
+        "revenueGrowthChange": { "type": "number" },
+        "operatingMarginChange": { "type": "number" },
+        "interestExpenseChange": { "type": "number" },
+        "taxRateChange": { "type": "number" },
+        "capexChange": { "type": "number" },
+        "impliedSharePrice": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "companyTicker", "scenarioName"]
+    },
+    "WatchlistItem": {
+      "title": "WatchlistItem",
+      "description": "Companies tracked by the user with custom target valuation price",
+      "type": "object",
+      "properties": {
+        "companyTicker": { "type": "string", "maxLength": 16 },
+        "companyName": { "type": "string", "maxLength": 128 },
+        "targetPrice": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["companyTicker", "companyName"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user account profile and terminal preferences"
+    },
+    "/users/{userId}/research_notes/{noteId}": {
+      "schema": "ResearchNote",
+      "description": "User personal financial research notes"
+    },
+    "/users/{userId}/custom_scenarios/{scenarioId}": {
+      "schema": "CustomScenario",
+      "description": "User custom scenario models and quantitative projections"
+    },
+    "/users/{userId}/watchlist/{companyTicker}": {
+      "schema": "WatchlistItem",
+      "description": "User tracked equities and price targets"
+    }
+  }
+}
